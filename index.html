@@ -1,0 +1,569 @@
+<!DOCTYPE html>
+<html lang="ar">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>تطبيق قائمة المهام</title>
+  <link rel="manifest" href="manifest.json">
+  <style>
+    /* الأساسيات والتأثيرات الانتقالية */
+    body {
+      font-family: Arial, sans-serif;
+      background: #f7f7f7;
+      margin: 0;
+      padding: 0;
+      transition: background 0.3s, color 0.3s;
+    }
+    /* شريط الإخبار */
+    #news-ticker {
+      background: #444;
+      color: #fff;
+      padding: 5px;
+      overflow: hidden;
+      white-space: nowrap;
+      font-size: 14px;
+      text-align: center;
+    }
+    #news-ticker span {
+      display: inline-block;
+      padding-left: 100%;
+      animation: ticker 20s linear infinite;
+    }
+    @keyframes ticker {
+      0% { transform: translateX(0); }
+      100% { transform: translateX(-100%); }
+    }
+
+    /* الهيدر */
+    header {
+      background: #007BFF;
+      color: #fff;
+      text-align: center;
+      padding: 20px;
+      position: relative;
+    }
+    header img {
+      position: absolute;
+      top: 10px;
+      left: 10px;
+      width: 60px;
+      height: 60px;
+      border-radius: 5px;
+      object-fit: contain;
+    }
+
+    /* زر تبديل الوضع الليلي */
+    #darkModeToggle {
+      position: absolute;
+      top: 20px;
+      right: 20px;
+      padding: 5px 10px;
+      border: none;
+      border-radius: 5px;
+      background: #fff;
+      color: #007BFF;
+      cursor: pointer;
+      font-size: 14px;
+      transition: background 0.3s, color 0.3s;
+    }
+
+    /* الحاوية الرئيسية */
+    .container {
+      max-width: 500px;
+      margin: 20px auto;
+      padding: 20px;
+      background: #fff;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+      border-radius: 5px;
+      transition: background 0.3s;
+    }
+
+    /* مدخلات المهمة */
+    #taskInput, #dueDateInput, #categoryInput {
+      padding: 10px;
+      border: 1px solid #ccc;
+      border-radius: 5px;
+      transition: border 0.3s;
+    }
+    #taskInput {
+      width: 45%;
+      margin-right: 5px;
+    }
+    #dueDateInput {
+      width: 45%;
+      margin-bottom: 5px;
+    }
+    #categoryInput {
+      width: 100%;
+      margin-bottom: 10px;
+    }
+
+    #addTaskBtn {
+      padding: 10px;
+      background: #28a745;
+      border: none;
+      color: #fff;
+      border-radius: 5px;
+      cursor: pointer;
+      transition: background 0.3s;
+      width: 100%;
+      margin-bottom: 10px;
+    }
+    #addTaskBtn:hover {
+      background: #218838;
+    }
+
+    .filters {
+      margin-top: 10px;
+      text-align: center;
+    }
+    .filters button {
+      margin: 0 5px;
+      padding: 8px 12px;
+      border: none;
+      background: #6c757d;
+      color: #fff;
+      border-radius: 5px;
+      cursor: pointer;
+      transition: background 0.3s;
+    }
+    .filters button.active {
+      background: #343a40;
+    }
+
+    #taskSummary {
+      text-align: center;
+      margin: 10px 0;
+      font-size: 1em;
+      color: #333;
+    }
+    #clearCompletedBtn {
+      padding: 10px;
+      background: #ffc107;
+      border: none;
+      color: #fff;
+      border-radius: 5px;
+      cursor: pointer;
+      margin-top: 10px;
+      display: block;
+      width: 100%;
+      transition: background 0.3s;
+    }
+    #clearCompletedBtn:hover {
+      background: #e0a800;
+    }
+
+    #taskList {
+      list-style: none;
+      margin-top: 20px;
+      padding: 0;
+    }
+    #taskList li {
+      padding: 10px;
+      border-bottom: 1px solid #ddd;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      transition: background 0.3s;
+      /* لتمكين السحب والإفلات */
+      cursor: move;
+    }
+    #taskList li:last-child {
+      border-bottom: none;
+    }
+    #taskList li.drag-over {
+      background: #eee;
+    }
+
+    .task-info {
+      flex: 1;
+    }
+    .task-text.completed {
+      text-decoration: line-through;
+      color: #888;
+    }
+    .timestamp {
+      font-size: 0.8em;
+      color: #666;
+    }
+    .due-date {
+      font-size: 0.8em;
+      color: #b10000;
+    }
+    .category {
+      font-size: 0.8em;
+      color: #555;
+      margin-top: 3px;
+    }
+
+    .task-actions button {
+      margin-left: 5px;
+      padding: 5px 10px;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+      color: #fff;
+      transition: background 0.3s;
+    }
+    .complete-btn { background: #17a2b8; }
+    .edit-btn { background: #007bff; }
+    .delete-btn { background: #dc3545; }
+    .complete-btn:hover { background: #138496; }
+    .edit-btn:hover { background: #0069d9; }
+    .delete-btn:hover { background: #c82333; }
+
+    footer {
+      background: #007BFF;
+      color: #fff;
+      text-align: center;
+      padding: 15px;
+      margin-top: 20px;
+    }
+
+    /* أنماط الوضع الليلي */
+    body.dark-mode {
+      background: #121212;
+      color: #e0e0e0;
+    }
+    body.dark-mode header { background: #1f1f1f; }
+    body.dark-mode .container {
+      background: #1f1f1f;
+      box-shadow: 0 2px 5px rgba(255,255,255,0.1);
+    }
+    body.dark-mode #taskInput,
+    body.dark-mode #dueDateInput,
+    body.dark-mode #categoryInput {
+      border-color: #555;
+      background: #333;
+      color: #e0e0e0;
+    }
+    body.dark-mode #addTaskBtn { background: #388e3c; }
+    body.dark-mode #addTaskBtn:hover { background: #2e7d32; }
+    body.dark-mode .filters button {
+      background: #555;
+      color: #e0e0e0;
+    }
+    body.dark-mode .filters button.active {
+      background: #333;
+    }
+    body.dark-mode #clearCompletedBtn { background: #fbc02d; }
+    body.dark-mode #clearCompletedBtn:hover { background: #f9a825; }
+    body.dark-mode #taskList li { border-color: #444; }
+    body.dark-mode footer { background: #1f1f1f; }
+  </style>
+</head>
+<body>
+  <!-- شريط إخباري -->
+  <div id="news-ticker">
+    <span>تصميم شركة التميز الابتكاري INEXC</span>
+  </div>
+
+  <header>
+    <img src="inexc-logo.png" alt="شعار شركة التميز الابتكاري INEXC">
+    <h1>تطبيق قائمة المهام</h1>
+    <button id="darkModeToggle">الوضع الليلي</button>
+  </header>
+
+  <main>
+    <div class="container">
+      <!-- مدخلات المهمة الجديدة -->
+      <div style="display: flex; justify-content: space-between; flex-wrap: wrap;">
+        <input type="text" id="taskInput" placeholder="أدخل مهمة جديدة">
+        <input type="datetime-local" id="dueDateInput">
+      </div>
+      <input type="text" id="categoryInput" placeholder="التصنيف (عمل، دراسة، شخصي...)">
+      <button id="addTaskBtn">إضافة المهمة</button>
+
+      <!-- منطقة الفلترة -->
+      <div class="filters">
+        <button id="filter-all" class="active">الكل</button>
+        <button id="filter-active">غير مكتملة</button>
+        <button id="filter-completed">مكتملة</button>
+      </div>
+
+      <!-- ملخص المهام -->
+      <div id="taskSummary"></div>
+
+      <ul id="taskList"></ul>
+      <button id="clearCompletedBtn">حذف المهام المكتملة</button>
+    </div>
+  </main>
+
+  <footer>
+    <p>© 2025 شركة التميز الابتكاري INEXC</p>
+  </footer>
+
+  <script>
+    // زر الوضع الليلي
+    document.getElementById('darkModeToggle').addEventListener('click', () => {
+      document.body.classList.toggle('dark-mode');
+      const btn = document.getElementById('darkModeToggle');
+      btn.textContent = document.body.classList.contains('dark-mode') ? 'الوضع النهاري' : 'الوضع الليلي';
+    });
+
+    // طلب إذن الإشعارات
+    if ('Notification' in window) {
+      Notification.requestPermission().then(permission => {
+        if (permission === 'granted') {
+          console.log('إشعارات مسموح بها');
+        }
+      });
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+      const taskInput = document.getElementById('taskInput');
+      const dueDateInput = document.getElementById('dueDateInput');
+      const categoryInput = document.getElementById('categoryInput');
+      const addTaskBtn = document.getElementById('addTaskBtn');
+      const taskList = document.getElementById('taskList');
+      const clearCompletedBtn = document.getElementById('clearCompletedBtn');
+      const filterAllBtn = document.getElementById('filter-all');
+      const filterActiveBtn = document.getElementById('filter-active');
+      const filterCompletedBtn = document.getElementById('filter-completed');
+      const taskSummary = document.getElementById('taskSummary');
+
+      let currentFilter = 'all';
+      let tasks = JSON.parse(localStorage.getItem('tasks')) || [];
+
+      function saveTasks() {
+        localStorage.setItem('tasks', JSON.stringify(tasks));
+      }
+
+      function updateSummary() {
+        const total = tasks.length;
+        const completed = tasks.filter(task => task.completed).length;
+        taskSummary.textContent = `المهام: ${total} | مكتملة: ${completed}`;
+      }
+
+      function setActiveFilter(filter) {
+        currentFilter = filter;
+        filterAllBtn.classList.remove('active');
+        filterActiveBtn.classList.remove('active');
+        filterCompletedBtn.classList.remove('active');
+        if (filter === 'all') {
+          filterAllBtn.classList.add('active');
+        } else if (filter === 'active') {
+          filterActiveBtn.classList.add('active');
+        } else if (filter === 'completed') {
+          filterCompletedBtn.classList.add('active');
+        }
+        renderTasks();
+      }
+
+      filterAllBtn.addEventListener('click', () => setActiveFilter('all'));
+      filterActiveBtn.addEventListener('click', () => setActiveFilter('active'));
+      filterCompletedBtn.addEventListener('click', () => setActiveFilter('completed'));
+
+      // دالة إعادة رسم المهام
+      function renderTasks() {
+        taskList.innerHTML = '';
+        let filteredTasks = tasks;
+
+        if (currentFilter === 'active') {
+          filteredTasks = tasks.filter(task => !task.completed);
+        } else if (currentFilter === 'completed') {
+          filteredTasks = tasks.filter(task => task.completed);
+        }
+
+        filteredTasks.forEach((task, index) => {
+          const li = document.createElement('li');
+          li.setAttribute('draggable', 'true'); // تمكين السحب والإفلات
+          li.dataset.index = index; // حفظ فهرس المهمة لغايات إعادة الترتيب
+
+          // معالجة الأحداث الخاصة بالسحب والإفلات
+          li.addEventListener('dragstart', handleDragStart);
+          li.addEventListener('dragover', handleDragOver);
+          li.addEventListener('drop', handleDrop);
+
+          const taskInfoDiv = document.createElement('div');
+          taskInfoDiv.classList.add('task-info');
+
+          const span = document.createElement('span');
+          span.textContent = task.text;
+          span.classList.add('task-text');
+          if (task.completed) {
+            span.classList.add('completed');
+          }
+          taskInfoDiv.appendChild(span);
+
+          // عرض وقت الإضافة
+          if (task.timestamp) {
+            const timestamp = document.createElement('div');
+            timestamp.classList.add('timestamp');
+            const date = new Date(task.timestamp);
+            timestamp.textContent = 'أضيفت في: ' + date.toLocaleString();
+            taskInfoDiv.appendChild(timestamp);
+          }
+
+          // عرض تاريخ الاستحقاق
+          if (task.dueDate) {
+            const dueDateEl = document.createElement('div');
+            dueDateEl.classList.add('due-date');
+            dueDateEl.textContent = 'موعد الاستحقاق: ' + new Date(task.dueDate).toLocaleString();
+            taskInfoDiv.appendChild(dueDateEl);
+          }
+
+          // عرض التصنيف
+          if (task.category) {
+            const categoryEl = document.createElement('div');
+            categoryEl.classList.add('category');
+            categoryEl.textContent = 'التصنيف: ' + task.category;
+            taskInfoDiv.appendChild(categoryEl);
+          }
+
+          li.appendChild(taskInfoDiv);
+
+          const actionsDiv = document.createElement('div');
+          actionsDiv.classList.add('task-actions');
+
+          const completeBtn = document.createElement('button');
+          completeBtn.textContent = task.completed ? 'تراجع' : 'تم';
+          completeBtn.classList.add('complete-btn');
+          completeBtn.addEventListener('click', () => {
+            task.completed = !task.completed;
+            saveTasks();
+            renderTasks();
+          });
+          actionsDiv.appendChild(completeBtn);
+
+          const editBtn = document.createElement('button');
+          editBtn.textContent = 'تعديل';
+          editBtn.classList.add('edit-btn');
+          editBtn.addEventListener('click', () => {
+            const newText = prompt('تعديل المهمة:', task.text);
+            if (newText !== null && newText.trim() !== '') {
+              task.text = newText.trim();
+              saveTasks();
+              renderTasks();
+            }
+          });
+          actionsDiv.appendChild(editBtn);
+
+          const deleteBtn = document.createElement('button');
+          deleteBtn.textContent = 'حذف';
+          deleteBtn.classList.add('delete-btn');
+          deleteBtn.addEventListener('click', () => {
+            tasks = tasks.filter(t => t !== task);
+            saveTasks();
+            renderTasks();
+          });
+          actionsDiv.appendChild(deleteBtn);
+
+          li.appendChild(actionsDiv);
+          taskList.appendChild(li);
+        });
+
+        updateSummary();
+      }
+
+      // أحداث السحب والإفلات
+      let dragStartIndex;
+      function handleDragStart(e) {
+        dragStartIndex = +e.target.dataset.index;
+        e.dataTransfer.effectAllowed = 'move';
+      }
+      function handleDragOver(e) {
+        e.preventDefault();
+        const li = e.target.closest('li');
+        if (!li) return;
+        li.classList.add('drag-over');
+      }
+      function handleDrop(e) {
+        e.preventDefault();
+        const li = e.target.closest('li');
+        if (!li) return;
+        li.classList.remove('drag-over');
+
+        const dragEndIndex = +li.dataset.index;
+        // تبادل العناصر في المصفوفة
+        const temp = tasks[dragStartIndex];
+        tasks[dragStartIndex] = tasks[dragEndIndex];
+        tasks[dragEndIndex] = temp;
+        saveTasks();
+        renderTasks();
+      }
+
+      // إضافة مهمة جديدة
+      addTaskBtn.addEventListener('click', () => {
+        const text = taskInput.value.trim();
+        const dueDate = dueDateInput.value;
+        const category = categoryInput.value.trim();
+        if (text !== '') {
+          tasks.push({
+            text,
+            completed: false,
+            timestamp: Date.now(),
+            dueDate: dueDate || null,
+            category: category || null
+          });
+          saveTasks();
+          taskInput.value = '';
+          dueDateInput.value = '';
+          categoryInput.value = '';
+
+          renderTasks();
+
+          // إشعار بإضافة مهمة جديدة (إذا كان الإذن ممنوحًا)
+          if (Notification.permission === 'granted') {
+            new Notification('تمت إضافة مهمة جديدة!', {
+              body: text,
+              icon: 'inexc-logo.png'
+            });
+          }
+        }
+      });
+
+      // إضافة مهمة بالضغط على زر Enter
+      taskInput.addEventListener('keyup', (e) => {
+        if (e.key === 'Enter') {
+          addTaskBtn.click();
+        }
+      });
+
+      // حذف جميع المهام المكتملة
+      clearCompletedBtn.addEventListener('click', () => {
+        tasks = tasks.filter(task => !task.completed);
+        saveTasks();
+        renderTasks();
+      });
+
+      // التحقق من مواعيد الاستحقاق كل دقيقة
+      setInterval(() => {
+        const now = Date.now();
+        tasks.forEach(task => {
+          if (task.dueDate && !task.completed) {
+            const dueTime = new Date(task.dueDate).getTime();
+            // إذا بقي أقل من دقيقة على الموعد ولم تصدر إشعار سابق
+            if (dueTime - now <= 60000 && !task.reminderShown) {
+              task.reminderShown = true; // منع تكرار الإشعار
+              saveTasks();
+              if (Notification.permission === 'granted') {
+                new Notification('اقتراب موعد المهمة!', {
+                  body: task.text,
+                  icon: 'inexc-logo.png'
+                });
+              }
+            }
+          }
+        });
+      }, 60000);
+
+      // عند بدء التشغيل
+      renderTasks();
+    });
+
+    // تسجيل Service Worker لتفعيل العمل دون اتصال (PWA)
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', function() {
+        navigator.serviceWorker.register('sw.js')
+          .then(function(registration) {
+            console.log('تم تسجيل ServiceWorker بنجاح بنطاق:', registration.scope);
+          }, function(err) {
+            console.log('فشل تسجيل ServiceWorker:', err);
+          });
+      });
+    }
+  </script>
+</body>
+</html>
